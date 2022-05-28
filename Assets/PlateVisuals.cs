@@ -14,6 +14,8 @@ public class PlateVisuals : MonoBehaviour
     TextMeshProUGUI[] inputs;
     TextMeshProUGUI[] outputs;
     Transform[] plates;
+    Transform[] EFLinePositions;
+    LineRenderer[] lines;
 
     // Start is called before the first frame update
     void Start()
@@ -40,11 +42,21 @@ public class PlateVisuals : MonoBehaviour
         {
             outputs[i] = GameObject.Find("OutputText" + i).transform.GetComponentInChildren<TextMeshProUGUI>();
         }
+
+        EFLinePositions = new Transform[8];
+        for (int i = 1; i <= 4; i++)
+        {
+            EFLinePositions[i-1] = GameObject.Find("LinePosTop" + i).transform;
+            EFLinePositions[i+3] = GameObject.Find("LinePosBottom" + i).transform;
+        }
+
+        lines = FindObjectsOfType<LineRenderer>();
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
+        // Rotate parallel plate capacitor model
         transform.Rotate(Vector3.up, 0.25f);
 
         // Update capacitor inputs based on slider values
@@ -62,14 +74,46 @@ public class PlateVisuals : MonoBehaviour
         }
 
 
-        // TODO: add units
-        inputs[0].text = capacitor.variables.A.ToString() + " m^2";
-        inputs[1].text = capacitor.variables.d.ToString() + " m";
-        inputs[2].text = capacitor.variables.Q.ToString() + " C";
+        // Add units and round values
+        inputs[0].text = FormatNumber(capacitor.variables.A) + " m^2";
+        inputs[1].text = FormatNumber(capacitor.variables.d) + " m";
+        inputs[2].text = FormatNumber(capacitor.variables.Q) + " C";
 
-        outputs[0].text = capacitor.variables.C.ToString() + " F";
-        outputs[1].text = capacitor.variables.deltaV.ToString() + " V";
-        outputs[2].text = capacitor.variables.U.ToString() + " J";
-        outputs[3].text = capacitor.variables.E.ToString() + " N/C";
+        outputs[0].text = FormatNumber(capacitor.variables.C) + " F";
+        outputs[1].text = FormatNumber(capacitor.variables.deltaV) + " V";
+        outputs[2].text = FormatNumber(capacitor.variables.U) + " J";
+        outputs[3].text = FormatNumber(capacitor.variables.E) + " V/m";
+
+        // Update electric field lines
+        UpdateLineRenderers();
+    }
+    
+    // Round number to 2 decimal places and include scientific notation
+    public string FormatNumber(float input)
+    {
+        string result;
+
+        // For very large or very small numbers we need to
+        // separate the exponent to round off our input appropriately
+        if (Mathf.Abs(input) >= 1000 || (Mathf.Abs(input) <= 0.01f && input != 0))
+        {
+            float exponent = (float)(System.Math.Floor(System.Math.Log10(System.Math.Abs(input))));
+            float mantissa = (float)(input / System.Math.Pow(10, exponent));
+
+            result = $"{Mathf.Round(mantissa*100f)/100} E{exponent}";
+        }
+        else
+            result = (Mathf.Round(input*100) / 100f).ToString();
+
+        return result;
+    }
+
+    // Updates electric field lines
+    public void UpdateLineRenderers()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            lines[i].SetPositions(new Vector3[2]{ EFLinePositions[i].position, EFLinePositions[i + 4].position});
+        }
     }
 }
